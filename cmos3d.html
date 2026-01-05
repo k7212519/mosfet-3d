@@ -156,13 +156,178 @@
         let scene, camera, renderer, controls;
         let currentModelGroup = null;
         let animationId;
+        
+        // Particle System for Electron Flow
+        const particleSystem = {
+            mesh: null,
+            count: 200, // Reduced from 400
+            dummy: new THREE.Object3D(),
+            data: [], // { velocity, boundary }
+            init: function(type) {
+                if (this.mesh) {
+                    scene.remove(this.mesh);
+                    this.mesh.geometry.dispose();
+                    this.mesh.material.dispose();
+                    this.mesh = null;
+                    this.data = [];
+                }
+
+                const geometry = new THREE.SphereGeometry(0.03, 8, 8);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: 0x00ffff, 
+                    transparent: true, 
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending
+                });
+                
+                this.mesh = new THREE.InstancedMesh(geometry, material, this.count);
+                this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                
+                // Initialize based on type
+                for (let i = 0; i < this.count; i++) {
+                    this.resetParticle(i, type, true);
+                }
+                
+                if (currentModelGroup) {
+                    currentModelGroup.add(this.mesh); // Attach to rotating model
+                } else {
+                    scene.add(this.mesh);
+                }
+            },
+            resetParticle: function(i, type, randomX = false) {
+                const dummy = this.dummy;
+                
+                // Common X range (Source to Drain)
+                // Models typically span X: -2 to 2 or -2.5 to 2.5
+                // Flow usually from Source (Left/Negative) to Drain (Right/Positive)
+                let xStart = -2.3; // Adjusted to match aligned geometry (4.6 width)
+                let xEnd = 2.3;
+                let x = randomX ? (Math.random() * (xEnd - xStart) + xStart) : xStart;
+                let y, z;
+                let speed = 0.01 + Math.random() * 0.01; // Slower speed (was 0.05)
+
+                // Specific Geometry Logic
+                if (type === 'planar' || type === 'soi') {
+                    // Planar/SOI: Flow on surface of active area
+                    // Active Width Z: 2 (-1 to 1)
+                    // Active Top Y: 
+                    // Planar: 0.1 + EPS + 0.1 (half height) = ~0.2 (Oxide is at 0.225) -> Flow at y=0.2
+                    // SOI: Active center -0.15 + EPS*2. Height 0.2. Top ~ -0.05.
+                    
+                    z = (Math.random() - 0.5) * 1.8; // Margin inside Z width 2
+                    
+                    if (type === 'planar') y = 0.21; // Just under oxide
+                    if (type === 'soi') y = -0.04; // Just under oxide
+                    
+                } else if (type === 'finfet') {
+                    // FinFET: Flow on Top and Sides of Fins
+                    // Fin Centers Z: -0.6 and 0.6
+                    // Fin Dims: Width 0.3, Height 0.8
+                    // Fin Y Center: 0.15 + EPS. Top Y: 0.15 + 0.4 = 0.55.
+                    // Side Z range: Center +/- 0.15.
+                    
+                    const finChoice = Math.random() > 0.5 ? 0.6 : -0.6; // Choose Fin 1 or 2
+                    const faceChoice = Math.random(); // Top or Sides?
+                    
+                    if (faceChoice > 0.6) { // Top (40% chance)
+                        y = 0.56; // Just above fin
+                        z = finChoice + (Math.random() - 0.5) * 0.25;
+                    } else { // Sides (60% chance)
+                        // Side Y range: Center 0.15. Height 0.8 -> -0.25 to 0.55.
+                        // We want mostly channel region under gate? Or whole fin? Whole fin for now.
+                        y = 0.15 + (Math.random() - 0.5) * 0.7; 
+                        const sideOffset = 0.16; // Just outside width 0.3/2 = 0.15
+                        z = finChoice + (Math.random() > 0.5 ? sideOffset : -sideOffset);
+                    }
+
+                } else if (type === 'gaafet') {
+                    // GAAFET: Flow on SURFACE of the nanosheets for better visibility
+                    // 3 Sheets at Y: -1.0, -0.4, 0.2 (approx with i*0.6)
+                    
+                    const sheetIdx = Math.floor(Math.random() * 3);
+                    // i=0: -1.0 + EPS. i=1: -0.4 + EPS. i=2: 0.2 + EPS.
+                    const sheetY = -1.0 + (sheetIdx * 0.6) + 0.002;
+                    
+                    // Distribute on the outer skin of the nanosheet
+                    // Sheet Dims: Width (Z) 1.0, Height (Y) 0.15
+                    const face = Math.random();
+                    const hH = 0.075; // Half Height
+                    const hW = 0.5;   // Half Width
+                    const eps = 0.02; // Offset
+                    
+                    if (face < 0.33) { // Top Surface
+                        y = sheetY + hH + eps;
+                        z = (Math.random() - 0.5) * (hW * 2);
+                    } else if (face < 0.66) { // Bottom Surface
+                        y = sheetY - hH - eps;
+                        z = (Math.random() - 0.5) * (hW * 2);
+                    } else if (face < 0.83) { // Front Side
+                        y = sheetY + (Math.random() - 0.5) * (hH * 2);
+                        z = hW + eps;
+                    } else { // Back Side
+                        y = sheetY + (Math.random() - 0.5) * (hH * 2);
+                        z = -hW - eps;
+                    }
+                    
+                    // Constrain X for GAAFET (S/D are at +/- 1.8)
+                    xStart = -2.2;
+                    xEnd = 2.2;
+                    if (!randomX) x = xStart;
+                }
+
+                dummy.position.set(x, y, z);
+                dummy.updateMatrix();
+                
+                // Store state
+                this.data[i] = {
+                    velocity: speed,
+                    boundary: xEnd,
+                    start: xStart,
+                    type: type,
+                    y: y,
+                    z: z
+                };
+                
+                this.mesh.setMatrixAt(i, dummy.matrix);
+            },
+            update: function() {
+                if (!this.mesh) return;
+                
+                const dummy = this.dummy;
+                
+                for (let i = 0; i < this.count; i++) {
+                    const d = this.data[i];
+                    // Retrieve current position
+                    this.mesh.getMatrixAt(i, dummy.matrix);
+                    dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
+                    
+                    // Move
+                    dummy.position.x += d.velocity;
+                    
+                    // Reset if out of bounds
+                    if (dummy.position.x > d.boundary) {
+                        this.resetParticle(i, d.type, false); // Reset to start
+                        // Re-fetch new position/matrix from reset
+                        // But wait, resetParticle writes to mesh.setMatrixAt(i)...
+                        // So we don't need to do anything else for this particle in this frame
+                        // effectively. 
+                        // However, resetParticle sets it to start.
+                    } else {
+                         // Update matrix
+                        dummy.updateMatrix();
+                        this.mesh.setMatrixAt(i, dummy.matrix);
+                    }
+                }
+                this.mesh.instanceMatrix.needsUpdate = true;
+            }
+        };
 
         // Materials - High Quality PBR
         // 统一材质属性，仅颜色区分
         const baseSiliconProps = {
             metalness: 0.6,
-            roughness: 0.2,
-            clearcoat: 0.1,
+            roughness: 0.1, // More glossy
+            clearcoat: 0.5, // Enhanced gloss
             clearcoatRoughness: 0.1
         };
 
@@ -260,10 +425,10 @@
         function setupLights() {
             RectAreaLightUniformsLib.init();
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Increased ambient
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Increased ambient (was 0.4)
             scene.add(ambientLight);
 
-            const spotLight = new THREE.SpotLight(0xffffff, 30); // Increased intensity
+            const spotLight = new THREE.SpotLight(0xffffff, 40); // Increased intensity (was 30)
             spotLight.position.set(5, 10, 5);
             spotLight.angle = Math.PI / 4;
             spotLight.penumbra = 0.5;
@@ -273,18 +438,18 @@
             spotLight.shadow.mapSize.height = 1024;
             scene.add(spotLight);
 
-            const rectLight1 = new THREE.RectAreaLight(0x4488ff, 8, 10, 10); // Increased intensity
+            const rectLight1 = new THREE.RectAreaLight(0x4488ff, 12, 10, 10); // Increased intensity (was 8)
             rectLight1.position.set(-5, 5, 5);
             rectLight1.lookAt(0, 0, 0);
             scene.add(rectLight1);
 
-            const rectLight2 = new THREE.RectAreaLight(0xff8844, 8, 10, 10); // Increased intensity
+            const rectLight2 = new THREE.RectAreaLight(0xff8844, 12, 10, 10); // Increased intensity (was 8)
             rectLight2.position.set(5, 5, -5);
             rectLight2.lookAt(0, 0, 0);
             scene.add(rectLight2);
 
             // Bottom Light - Fill for the underside
-            const bottomLight = new THREE.DirectionalLight(0xaabbff, 2);
+            const bottomLight = new THREE.DirectionalLight(0xaabbff, 3); // Increased intensity (was 2)
             bottomLight.position.set(0, -5, 0);
             bottomLight.target.position.set(0, 0, 0);
             scene.add(bottomLight);
@@ -323,7 +488,8 @@
             group.add(substrate);
 
             // Active Silicon (Source/Drain) - Lifted slightly
-            const activeGeo = new THREE.BoxGeometry(4, 0.2, 2);
+            // Widened to 4.5 to align with substrate edges
+            const activeGeo = new RoundedBoxGeometry(4.5, 0.2, 2, 4, 0.02);
             const active = new THREE.Mesh(activeGeo, materials.siliconActive);
             active.position.y = 0.1 + EPS; 
             active.castShadow = true;
@@ -331,14 +497,14 @@
             group.add(active);
             
             // Channel - Lifted slightly more and scaled to avoid overlapping faces with Active
-            const channelGeo = new THREE.BoxGeometry(1, 0.2, 2);
+            const channelGeo = new RoundedBoxGeometry(1, 0.2, 2, 4, 0.02);
             const channel = new THREE.Mesh(channelGeo, materials.silicon); 
             channel.position.y = 0.1 + EPS * 2;
             channel.scale.set(1.02, 1.02, 1.02); // Make it slightly larger to cover the seam
             group.add(channel);
 
             // Gate Oxide - Lifted
-            const oxideGeo = new THREE.BoxGeometry(1, 0.05, 2);
+            const oxideGeo = new RoundedBoxGeometry(1, 0.05, 2, 4, 0.01); // Smaller radius for thin layer
             const oxide = new THREE.Mesh(oxideGeo, materials.oxide);
             oxide.position.y = 0.225 + EPS * 3;
             group.add(oxide);
@@ -353,6 +519,7 @@
             
             scene.add(group);
             currentModelGroup = group;
+            particleSystem.init('planar');
         };
 
         // 2. SOI CMOS (Silicon On Insulator)
@@ -372,28 +539,29 @@
             group.add(substrate);
 
             // BOX (Buried Oxide) - Lifted
-            const boxGeo = new THREE.BoxGeometry(4.5, 0.5, 3);
+            const boxGeo = new RoundedBoxGeometry(4.5, 0.5, 3, 4, 0.05);
             const box = new THREE.Mesh(boxGeo, materials.oxide);
             box.position.y = -0.5 + EPS;
             box.receiveShadow = true;
             group.add(box);
 
             // Active Silicon (Thin body) - Lifted
-            const activeGeo = new THREE.BoxGeometry(4, 0.2, 2);
+            // Widened to 4.5 to align with substrate/BOX edges
+            const activeGeo = new RoundedBoxGeometry(4.5, 0.2, 2, 4, 0.02);
             const active = new THREE.Mesh(activeGeo, materials.siliconActive);
             active.position.y = -0.15 + EPS * 2;
             active.castShadow = true;
             group.add(active);
 
              // Channel - Lifted and Scaled
-            const channelGeo = new THREE.BoxGeometry(1, 0.2, 2);
+            const channelGeo = new RoundedBoxGeometry(1, 0.2, 2, 4, 0.02);
             const channel = new THREE.Mesh(channelGeo, materials.silicon);
             channel.position.y = -0.15 + EPS * 3;
             channel.scale.set(1.02, 1.02, 1.02);
             group.add(channel);
 
             // Gate Oxide - Lifted
-            const oxideGeo = new THREE.BoxGeometry(1, 0.05, 2);
+            const oxideGeo = new RoundedBoxGeometry(1, 0.05, 2, 4, 0.01);
             const oxide = new THREE.Mesh(oxideGeo, materials.oxide);
             oxide.position.y = -0.025 + EPS * 4;
             group.add(oxide);
@@ -407,6 +575,7 @@
 
             scene.add(group);
             currentModelGroup = group;
+            particleSystem.init('soi');
         };
 
         // 3. FinFET
@@ -424,7 +593,8 @@
             group.add(substrate);
 
             // Fins (Multiple)
-            const finGeo = new THREE.BoxGeometry(5, 0.8, 0.3); // Tall and thin
+            // Length set to 4.6 to align with substrate edges
+            const finGeo = new RoundedBoxGeometry(4.6, 0.8, 0.3, 4, 0.03); // Tall and thin, small radius
             
             // Fin 1
             const fin1 = new THREE.Mesh(finGeo, materials.siliconActive);
@@ -442,7 +612,7 @@
             // Sits ON TOP of substrate. Substrate Top = -0.25.
             // STI Height = 0.4. Center = -0.25 + 0.2 = -0.05.
             // Width/Depth = 4.5/3.0 (Smaller than substrate 4.6/3.1 to avoid side flicker)
-            const stiGeo = new THREE.BoxGeometry(4.5, 0.4, 3.0);
+            const stiGeo = new RoundedBoxGeometry(4.5, 0.4, 3.0, 4, 0.04);
             const sti = new THREE.Mesh(stiGeo, new THREE.MeshPhysicalMaterial({
                 color: 0xcccccc, // Lighter grey for better visibility
                 roughness: 0.5,
@@ -460,11 +630,15 @@
             const gateGeo = new RoundedBoxGeometry(gateWidth, gateHeight, gateDepth, 4, 0.05);
             const gate = new THREE.Mesh(gateGeo, materials.gateMetal);
             gate.position.set(0, 0.5, 0);
+            gate.material = materials.gateMetal.clone();
+            gate.material.transparent = true;
+            gate.material.opacity = 0.7; // Added transparency
             gate.castShadow = true;
             group.add(gate);
 
             scene.add(group);
             currentModelGroup = group;
+            particleSystem.init('finfet');
         };
 
         // 4. GAAFET (Gate-All-Around / Nanosheet)
@@ -483,7 +657,7 @@
 
             // Source and Drain Pillars
             // Reduced thickness (0.6) and adjusted position to fit within substrate (width 4.5)
-            const sdGeo = new THREE.BoxGeometry(0.6, 2, 2);
+            const sdGeo = new RoundedBoxGeometry(0.6, 2, 2, 4, 0.05);
             const source = new THREE.Mesh(sdGeo, materials.siliconActive);
             source.position.set(-1.8, -0.5 + EPS, 0);
             source.castShadow = true;
@@ -496,7 +670,7 @@
 
             // Nanosheets
             // Length reduced to 3.6 to match new S/D positions
-            const sheetGeo = new THREE.BoxGeometry(3.6, 0.15, 1);
+            const sheetGeo = new RoundedBoxGeometry(3.6, 0.15, 1, 4, 0.015);
             
             for(let i = 0; i < 3; i++) {
                 const sheet = new THREE.Mesh(sheetGeo, materials.silicon);
@@ -506,16 +680,19 @@
             }
 
             // Gate - Made slightly larger and offset
-            const gateGeo = new RoundedBoxGeometry(1.55, 2.25, 2.55, 4, 0.05); // Expanded slightly
+            // Narrowed width (X-axis) from 1.55 to 1.0 to look more like a gate stack
+            const gateGeo = new RoundedBoxGeometry(1.0, 2.25, 2.55, 4, 0.05); 
             const gate = new THREE.Mesh(gateGeo, materials.gateMetal);
             gate.position.set(0, -0.4, 0);
             gate.material = materials.gateMetal.clone();
-            gate.material.opacity = 1.0; 
+            gate.material.transparent = true; // Make transparent to see particles inside
+            gate.material.opacity = 0.7;      // Increased opacity from 0.5 to 0.7
             gate.castShadow = true;
             group.add(gate);
 
             scene.add(group);
             currentModelGroup = group;
+            particleSystem.init('gaafet');
         };
 
         // Helper for UI
@@ -564,9 +741,13 @@
         function animate() {
             animationId = requestAnimationFrame(animate);
             controls.update();
+            
             if(currentModelGroup) {
                 currentModelGroup.rotation.y += 0.002;
             }
+            
+            particleSystem.update();
+
             renderer.render(scene, camera);
         }
 
