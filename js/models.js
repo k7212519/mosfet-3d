@@ -156,60 +156,153 @@ export function createSOICMOS(scene, particleSystem) {
     // Substrate (Base)
     const substrateGeo = new RoundedBoxGeometry(4.5, 1.2, 3, 4, 0.1);
     const substrate = new THREE.Mesh(substrateGeo, materials.substrate);
-    substrate.position.y = -1.3;
+    substrate.position.y = -1.5;
     substrate.receiveShadow = true;
     group.add(substrate);
-
-    // BOX (Buried Oxide)
-    const boxThickness = 0.2;
-    const boxGeo = new THREE.BoxGeometry(4.5, boxThickness, 3);
-    const box = new THREE.Mesh(boxGeo, materials.oxide);
-    box.position.y = -0.6 + EPS;
-    box.receiveShadow = true;
-    group.add(box);
 
     const yTop = 0.2;
     const channelThickness = 0.1;
     const channelTopY = yTop - channelThickness;
 
-    const boxTopY = box.position.y + boxThickness / 2;
-    const fillBottomY = boxTopY + EPS * 2;
-    const fillTopY = channelTopY;
-    const fillHeight = Math.max(0.05, fillTopY - fillBottomY);
+    // D/S geometry reference (same as Planar)
+    const sdWidth = 1.20;
+    const sdHeight = 0.5;
+    const sdCenterX = 1.125;
+    const sdCenterY = -0.05;
+    const sdBottomY = sdCenterY - sdHeight / 2;
 
+    // BOX is an opaque U-shape (single solid path)
+    const boxThickness = 0.6;
+    const boxTopY = sdBottomY; // This variable name is confusing, it's actually the "Shelf" top? 
+                               // Wait, boxTopY in previous code was sdBottomY.
+                               // But now BOX goes up to yTop.
+    const boxBaseTopY = sdBottomY; // The floor of the U
+    const boxBottomY = boxBaseTopY - boxThickness; // The bottom of the U base
+
+    // Bevel settings
+    const bevelSz = 0.04; 
+
+    // Compensate for bevel thickness in depth
+    // Total depth should be strictly less than substrate (3.0) to avoid protrusion
+    // Target Total Depth = 2.9
+    const sideDepth = 2.9 - 2 * bevelSz;
+    
+    // Target Total Width = 4.4 (Half = 2.2) to fit inside substrate (4.5)
+    const halfW = 2.2;
+    const centerW = 1.06; // Width of center fill (2 * 0.53 to slightly overlap 0.525)
+
+    const boxShape = new THREE.Shape();
+    const rBox = 0.1; // Matches substrate radius
+    
+    // Calculate inner width to clear the D/S blocks
+    // D/S outer edge is at 1.125 + 0.6 = 1.725
+    // We want the wall to start slightly outside that.
+    const innerHalfW = 1.75; 
+    
+    const rInner = 0.08; 
+
+    // Compensate for bevel expansion
+    // Outer boundaries (Bevel pushes OUT)
+    const drawTopY = yTop - bevelSz;          
+    const drawBottomY = boxBottomY + bevelSz; 
+    const drawHalfW = halfW - bevelSz;        // Compensate width
+    const drawRBox = rBox - bevelSz;          // Compensate radius
+
+    // Inner boundaries (Bevel pushes INTO the void/material?)
+    // Inner Floor (Normal Up) -> Bevel moves Up. Target: boxBaseTopY. Draw: boxBaseTopY - bevelSz.
+    const drawInnerBottomY = boxBaseTopY - bevelSz;
+
+    // Inner Side Wall (Normal Inwards/Center). Bevel moves Inwards. 
+    // Target: innerHalfW. Draw: innerHalfW + bevelSz.
+    const drawInnerHalfW = innerHalfW + bevelSz;
+
+    // Draw U-shape perimeter (Solid wall + bottom)
+    // Start: Outer Top-Left (flat part)
+    boxShape.moveTo(-drawHalfW, drawTopY - drawRBox);
+    
+    // Left Wall Down
+    boxShape.lineTo(-drawHalfW, drawBottomY + drawRBox);
+    boxShape.quadraticCurveTo(-drawHalfW, drawBottomY, -drawHalfW + drawRBox, drawBottomY);
+    
+    // Bottom
+    boxShape.lineTo(drawHalfW - drawRBox, drawBottomY);
+    boxShape.quadraticCurveTo(drawHalfW, drawBottomY, drawHalfW, drawBottomY + drawRBox);
+    
+    // Right Wall Up
+    boxShape.lineTo(drawHalfW, drawTopY - drawRBox);
+    boxShape.quadraticCurveTo(drawHalfW, drawTopY, drawHalfW - drawRBox, drawTopY);
+    
+    // Right Top Flat (Inward)
+    boxShape.lineTo(drawInnerHalfW, drawTopY);
+    
+    // Right Inner Wall Down
+    boxShape.lineTo(drawInnerHalfW, drawInnerBottomY + rInner);
+    boxShape.quadraticCurveTo(drawInnerHalfW, drawInnerBottomY, drawInnerHalfW - rInner, drawInnerBottomY);
+    
+    // Inner Bottom
+    boxShape.lineTo(-drawInnerHalfW + rInner, drawInnerBottomY);
+    boxShape.quadraticCurveTo(-drawInnerHalfW, drawInnerBottomY, -drawInnerHalfW, drawInnerBottomY + rInner);
+    
+    // Left Inner Wall Up
+    boxShape.lineTo(-drawInnerHalfW, drawTopY);
+    
+    // Left Top Flat (Outward)
+    boxShape.lineTo(-drawHalfW + drawRBox, drawTopY);
+    boxShape.quadraticCurveTo(-drawHalfW, drawTopY, -drawHalfW, drawTopY - drawRBox); // Back to start
+
+    const boxExtrudeSettings = {
+        steps: 1,
+        depth: sideDepth,
+        bevelEnabled: true,
+        bevelThickness: bevelSz,
+        bevelSize: bevelSz,
+        bevelSegments: 4 // smoother bevel
+    };
+    const boxGeo = new THREE.ExtrudeGeometry(boxShape, boxExtrudeSettings);
+    boxGeo.translate(0, 0, -sideDepth / 2);
+
+    const boxMaterial = materials.oxide.clone();
+    boxMaterial.transparent = false;
+    boxMaterial.opacity = 1;
+    const boxLayer = new THREE.Mesh(boxGeo, boxMaterial);
+    boxLayer.receiveShadow = true;
+    group.add(boxLayer);
+
+    // Middle silicon fill under channel (different color), bottom aligned with D/S bottom
+    const fillTopY = channelTopY - EPS * 2;
+    const fillHeight = Math.max(0.05, fillTopY - sdBottomY);
     const fillMaterial = materials.silicon.clone();
     fillMaterial.color = new THREE.Color(0x444466);
-
-    const fillGeo = new RoundedBoxGeometry(4.5, fillHeight, 3, 4, 0.08);
+    const fillGeo = new THREE.BoxGeometry(centerW, fillHeight, 2.9);
     const fill = new THREE.Mesh(fillGeo, fillMaterial);
-    fill.position.y = fillBottomY + fillHeight / 2;
+    fill.position.y = (sdBottomY + fillTopY) / 2;
     fill.receiveShadow = true;
     group.add(fill);
 
     // Source/Drain - Same as Planar
-    const sourceGeo = new RoundedBoxGeometry(1.20, 0.5, 3.02, 4, 0.05);
+    const sourceGeo = new RoundedBoxGeometry(sdWidth, sdHeight, 2.9, 4, 0.05);
     const source = new THREE.Mesh(sourceGeo, materials.siliconActive);
     source.material = materials.siliconActive.clone();
     source.material.transparent = true;
     source.material.opacity = 0.7;
     source.material.depthWrite = false;
     source.name = 'source';
-    source.position.set(-1.125, -0.05 + EPS, 0);
+    source.position.set(-sdCenterX, sdCenterY + EPS, 0);
     source.castShadow = true;
     group.add(source);
 
-    const drainGeo = new RoundedBoxGeometry(1.20, 0.5, 3.02, 4, 0.05);
+    const drainGeo = new RoundedBoxGeometry(sdWidth, sdHeight, 2.9, 4, 0.05);
     const drain = new THREE.Mesh(drainGeo, materials.siliconActive);
     drain.material = materials.siliconActive.clone();
     drain.material.transparent = true;
     drain.material.opacity = 0.7;
     drain.material.depthWrite = false;
     drain.name = 'drain';
-    drain.position.set(1.125, -0.05 + EPS, 0);
+    drain.position.set(sdCenterX, sdCenterY + EPS, 0);
     drain.castShadow = true;
     group.add(drain);
 
-    const channelGeo = new RoundedBoxGeometry(1, channelThickness, 3, 4, 0.02);
+    const channelGeo = new RoundedBoxGeometry(1, channelThickness, 2.9, 4, 0.02);
     const channel = new THREE.Mesh(channelGeo, materials.silicon);
     channel.material = materials.silicon.clone();
     channel.material.transparent = true;
@@ -221,12 +314,12 @@ export function createSOICMOS(scene, particleSystem) {
     group.add(channel);
 
     const oxideThickness = 0.05;
-    const oxideGeo = new RoundedBoxGeometry(1, oxideThickness, 3, 4, 0.01);
+    const oxideGeo = new RoundedBoxGeometry(1, oxideThickness, 2.9, 4, 0.01);
     const oxide = new THREE.Mesh(oxideGeo, materials.oxide);
     oxide.position.y = channelTopY + channelThickness + oxideThickness / 2 + EPS * 3;
     group.add(oxide);
 
-    const gateGeo = new RoundedBoxGeometry(1, 0.6, 3, 4, 0.05);
+    const gateGeo = new RoundedBoxGeometry(1, 0.6, 2.9, 4, 0.05);
     const gate = new THREE.Mesh(gateGeo, materials.gateMetal);
     gate.position.y = channelTopY + channelThickness + oxideThickness + 0.6 / 2 + EPS * 4;
     gate.castShadow = true;
