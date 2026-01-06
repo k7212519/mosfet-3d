@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOSFET/FinFET/GAAFET 3D 结构展示</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        #ui-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            width: auto;
+            max-width: 90vw;
+            box-sizing: border-box;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            scrollbar-width: none;
+        }
+        #ui-container::-webkit-scrollbar { 
+            display: none;
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 8px 16px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .btn.active {
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+            font-weight: 600;
+        }
+        #logo {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: 100px;
+            height: auto;
+            z-index: 10;
+            transition: width 0.3s ease;
+        }
+        #info-panel {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            text-align: right;
+            color: white;
+            max-width: 350px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
+        p { font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8); margin: 0; }
+        .highlight { color: #4db8ff; font-weight: bold; }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            #ui-container {
+                bottom: 20px;
+                padding: 8px 15px;
+                gap: 8px;
+                width: 90%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            .btn {
+                padding: 6px 12px;
+                font-size: 11px;
+                border-radius: 12px;
+                flex: 1 0 auto;
+                text-align: center;
+            }
+            #logo {
+                top: 20px;
+                left: 20px;
+                width: 70px;
+            }
+            #info-panel {
+                top: 20px;
+                right: 20px;
+                max-width: 200px;
+            }
+            h1 {
+                font-size: 16px;
+                margin-bottom: 5px;
+            }
+            p {
+                font-size: 11px;
+                line-height: 1.4;
+            }
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <img id="logo" src="assets/logo_cycore.png" alt="Logo">
+
+    <div id="info-panel">
+        <h1 id="model-title">MOSFET 展示</h1>
+        <p id="model-desc">选择下方按钮查看不同工艺节点下的晶体管结构。</p>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-container">
+        <button class="btn active" onclick="window.switchModel('planar')">Planar MOSFET</button>
+        <button class="btn" onclick="window.switchModel('soi')">SOI MOSFET</button>
+        <button class="btn" onclick="window.switchModel('finfet')">FinFET</button>
+        <button class="btn" onclick="window.switchModel('gaafet')">GAAFET</button>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
+
