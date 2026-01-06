@@ -25,6 +25,15 @@
 - **响应式设计**：支持桌面端和移动端
 - **URL参数支持**：通过 `?type=1/2/3/4` 直接访问特定模型
 
+## 截图展示
+
+### FinFET 3D 结构
+![FinFET](screenshots/finfet.png)
+
+### 其他晶体管结构
+![Planar MOSFET](screenshots/mosfet.png)
+![GAAFET](screenshots/gaafet.png)
+
 ## 使用方法
 
 1. 直接打开 `index.html` 或通过本地服务器访问
