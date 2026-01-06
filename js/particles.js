@@ -7,6 +7,7 @@ export class ParticleSystem {
         this.count = 200; // Reduced from 400
         this.dummy = new THREE.Object3D();
         this.data = []; // { velocity, boundary }
+        this.anchors = {}; // { [type]: { start, end, channelBox } }
     }
 
     init(type, scene, currentModelGroup) {
@@ -25,9 +26,45 @@ export class ParticleSystem {
             opacity: 0.8,
             blending: THREE.AdditiveBlending
         });
+        material.depthWrite = false;
         
         this.mesh = new THREE.InstancedMesh(geometry, material, this.count);
         this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        this.mesh.renderOrder = 999;
+
+        this.anchors[type] = null;
+        if (currentModelGroup && (type === 'planar' || type === 'soi')) {
+            const source = currentModelGroup.getObjectByName('source');
+            const drain = currentModelGroup.getObjectByName('drain');
+            const channel = currentModelGroup.getObjectByName('channel');
+
+            if (source && drain && channel) {
+                const sourceBox = new THREE.Box3().setFromObject(source);
+                const drainBox = new THREE.Box3().setFromObject(drain);
+                const channelBox = new THREE.Box3().setFromObject(channel);
+
+                const sourceCenterWorld = new THREE.Vector3(
+                    (sourceBox.min.x + sourceBox.max.x) / 2,
+                    (sourceBox.min.y + sourceBox.max.y) / 2,
+                    (sourceBox.min.z + sourceBox.max.z) / 2
+                );
+                const drainCenterWorld = new THREE.Vector3(
+                    (drainBox.min.x + drainBox.max.x) / 2,
+                    (drainBox.min.y + drainBox.max.y) / 2,
+                    (drainBox.min.z + drainBox.max.z) / 2
+                );
+
+                const channelMinLocal = currentModelGroup.worldToLocal(channelBox.min.clone());
+                const channelMaxLocal = currentModelGroup.worldToLocal(channelBox.max.clone());
+                const channelBoxLocal = new THREE.Box3().setFromPoints([channelMinLocal, channelMaxLocal]);
+
+                this.anchors[type] = {
+                    start: currentModelGroup.worldToLocal(sourceCenterWorld),
+                    end: currentModelGroup.worldToLocal(drainCenterWorld),
+                    channelBox: channelBoxLocal
+                };
+            }
+        }
         
         // Initialize based on type
         for (let i = 0; i < this.count; i++) {
@@ -57,17 +94,27 @@ export class ParticleSystem {
             // Planar/SOI: Flow only between Source and Drain through Channel
             // Source starts at -1.75, Drain ends at 1.75
             // Restrict flow start/end to slightly inside these bounds
-            xStart = -1.75; 
-            xEnd = 1.75;
-            
-            x = randomX ? (Math.random() * (xEnd - xStart) + xStart) : xStart;
+            const a = this.anchors[type];
+            if (a) {
+                xStart = a.start.x;
+                xEnd = a.end.x;
+                x = randomX ? (Math.random() * (xEnd - xStart) + xStart) : xStart;
 
-            // Z range: margin inside width 3.0 (so -1.4 to 1.4 safe)
-            z = (Math.random() - 0.5) * 2.6; 
-            
-            // Flow on surface of active area (y=0)
-            if (type === 'planar') y = 0.05; 
-            if (type === 'soi') y = 0.05; 
+                const ch = a.channelBox;
+                const zMargin = Math.max(0.0, (ch.max.z - ch.min.z) * 0.05);
+                z = Math.random() * (ch.max.z - ch.min.z - zMargin * 2) + ch.min.z + zMargin;
+
+                const layerThickness = Math.min(0.01, (ch.max.y - ch.min.y) * 0.2);
+                const planarYOffset = (type === 'planar' || type === 'soi') ? -0.04 : 0;
+                y = ch.max.y - 0.005 + planarYOffset + (Math.random() - 0.5) * layerThickness;
+            } else {
+                xStart = -1.75; 
+                xEnd = 1.75;
+                x = randomX ? (Math.random() * (xEnd - xStart) + xStart) : xStart;
+                z = (Math.random() - 0.5) * 2.6; 
+                if (type === 'planar') y = 0.05; 
+                if (type === 'soi') y = 0.05; 
+            }
             
         } else if (type === 'finfet') {
             x = randomX ? (Math.random() * (xEnd - xStart) + xStart) : xStart;

@@ -10,12 +10,14 @@ export function createPlanarCMOS(scene, particleSystem) {
 
     // Substrate - Single Mesh using ExtrudeGeometry
     const shape = new THREE.Shape();
-    const r = 0.08; // Corner radius (slightly smaller than S/D for clearance)
+    const r = 0.1; // Corner radius (slightly smaller than S/D for clearance)
     const wStart = -2.25;
     const wEnd = 2.25;
     const yBottom = -1.3;
     const yTop = 0.2; // Raised Side Walls
-    const yCenterTop = -0.1; // Lower Center
+    const channelThickness = 0.1;
+    const channelTopY = yTop - channelThickness;
+    const yCenterTop = channelTopY - 0.03; // Lower Center
     const yWellBottom = -0.3;
 
     // Start bottom left (after corner)
@@ -92,6 +94,11 @@ export function createPlanarCMOS(scene, particleSystem) {
     // Position y: center of -0.3 to 0.2 is -0.05. Height is 0.5.
     const sourceGeo = new RoundedBoxGeometry(1.20, 0.5, 3.02, 4, 0.05);
     const source = new THREE.Mesh(sourceGeo, materials.siliconActive);
+    source.material = materials.siliconActive.clone();
+    source.material.transparent = true;
+    source.material.opacity = 0.7;
+    source.material.depthWrite = false;
+    source.name = 'source';
     source.position.set(-1.125, -0.05 + EPS, 0);
     source.castShadow = true;
     source.receiveShadow = true;
@@ -100,28 +107,39 @@ export function createPlanarCMOS(scene, particleSystem) {
     // Drain (Right Well) - Embedded
     const drainGeo = new RoundedBoxGeometry(1.20, 0.5, 3.02, 4, 0.05);
     const drain = new THREE.Mesh(drainGeo, materials.siliconActive);
+    drain.material = materials.siliconActive.clone();
+    drain.material.transparent = true;
+    drain.material.opacity = 0.7;
+    drain.material.depthWrite = false;
+    drain.name = 'drain';
     drain.position.set(1.125, -0.05 + EPS, 0);
     drain.castShadow = true;
     drain.receiveShadow = true;
     group.add(drain);
     
     // Channel - On top of Substrate Center (-0.1)
-    const channelGeo = new RoundedBoxGeometry(1, 0.05, 3, 4, 0.02);
+    const channelGeo = new RoundedBoxGeometry(1, channelThickness, 3, 4, 0.02);
     const channel = new THREE.Mesh(channelGeo, materials.silicon); 
-    channel.position.y = -0.075 + EPS * 2; // Center of -0.1 to -0.05
+    channel.material = materials.silicon.clone();
+    channel.material.transparent = true;
+    channel.material.opacity = 0.7;
+    channel.material.depthWrite = false;
+    channel.name = 'channel';
+    channel.position.y = channelTopY + channelThickness / 2 - EPS * 2;
     channel.scale.set(1.02, 1.0, 1.02);
     group.add(channel);
 
     // Gate Oxide - Above Channel
-    const oxideGeo = new RoundedBoxGeometry(1, 0.05, 3, 4, 0.01);
+    const oxideThickness = 0.05;
+    const oxideGeo = new RoundedBoxGeometry(1, oxideThickness, 3, 4, 0.01);
     const oxide = new THREE.Mesh(oxideGeo, materials.oxide);
-    oxide.position.y = -0.025 + EPS * 3;
+    oxide.position.y = channelTopY + channelThickness + oxideThickness / 2 + EPS * 3;
     group.add(oxide);
 
     // Gate - Above the oxide
     const gateGeo = new RoundedBoxGeometry(1, 0.6, 3, 4, 0.05);
     const gate = new THREE.Mesh(gateGeo, materials.gateMetal);
-    gate.position.y = 0.3 + EPS * 4;
+    gate.position.y = channelTopY + channelThickness + oxideThickness + 0.6 / 2 + EPS * 4;
     gate.castShadow = true;
     gate.receiveShadow = true;
     group.add(gate);
@@ -136,141 +154,81 @@ export function createSOICMOS(scene, particleSystem) {
     const group = new THREE.Group();
 
     // Substrate (Base)
-    const substrateGeo = new RoundedBoxGeometry(4.5, 1.0, 3, 4, 0.1);
+    const substrateGeo = new RoundedBoxGeometry(4.5, 1.2, 3, 4, 0.1);
     const substrate = new THREE.Mesh(substrateGeo, materials.substrate);
-    substrate.position.y = -1.25;
+    substrate.position.y = -1.3;
     substrate.receiveShadow = true;
     group.add(substrate);
 
     // BOX (Buried Oxide)
-    const boxGeo = new RoundedBoxGeometry(4.5, 0.5, 3, 4, 0.05);
+    const boxThickness = 0.2;
+    const boxGeo = new THREE.BoxGeometry(4.5, boxThickness, 3);
     const box = new THREE.Mesh(boxGeo, materials.oxide);
-    box.position.y = -0.5 + EPS;
+    box.position.y = -0.6 + EPS;
     box.receiveShadow = true;
     group.add(box);
 
-    // Active Layer Container (Body) - Single Mesh using ExtrudeGeometry on top of BOX
-    // This creates the silicon film with "wells" for S/D
-    const shape = new THREE.Shape();
-    const r = 0.05; // Smaller corner radius for thin film
-    const wStart = -2.25;
-    const wEnd = 2.25;
-    // Relative heights within the active layer (total height ~0.3)
-    const yBottom = 0.0; 
-    const yTop = 0.25; // Raised Side Walls
-    const yCenterTop = -0.05; // Lower Center
-    const yWellBottom = -0.2; // Deeper Wells
+    const yTop = 0.2;
+    const channelThickness = 0.1;
+    const channelTopY = yTop - channelThickness;
 
-    // Start bottom left
-    shape.moveTo(wStart + r, yBottom);
-    
-    // Bottom edge
-    shape.lineTo(wEnd - r, yBottom);
-    shape.quadraticCurveTo(wEnd, yBottom, wEnd, yBottom + r);
-    
-    // Right outer edge
-    shape.lineTo(wEnd, yTop - r);
-    shape.quadraticCurveTo(wEnd, yTop, wEnd - r, yTop);
-    
-    // Top of Right Wall
-    shape.lineTo(1.75 + r, yTop);
-    shape.quadraticCurveTo(1.75, yTop, 1.75, yTop - r);
-    
-    // Right Well side (down)
-    shape.lineTo(1.75, yWellBottom + r);
-    shape.quadraticCurveTo(1.75, yWellBottom, 1.75 - r, yWellBottom);
-    
-    // Right Well Bottom
-    shape.lineTo(0.5 + r, yWellBottom);
-    shape.quadraticCurveTo(0.5, yWellBottom, 0.5, yWellBottom + r);
-    
-    // Center Wall right side (up)
-    shape.lineTo(0.5, yCenterTop - r);
-    shape.quadraticCurveTo(0.5, yCenterTop, 0.5 - r, yCenterTop);
-    
-    // Top of Center Wall (Channel body)
-    shape.lineTo(-0.5 + r, yCenterTop);
-    shape.quadraticCurveTo(-0.5, yCenterTop, -0.5, yCenterTop - r);
-    
-    // Center Wall left side (down)
-    shape.lineTo(-0.5, yWellBottom + r);
-    shape.quadraticCurveTo(-0.5, yWellBottom, -0.5 - r, yWellBottom);
-    
-    // Left Well Bottom
-    shape.lineTo(-1.75 + r, yWellBottom);
-    shape.quadraticCurveTo(-1.75, yWellBottom, -1.75, yWellBottom + r);
-    
-    // Left Wall inner side (up)
-    shape.lineTo(-1.75, yTop - r);
-    shape.quadraticCurveTo(-1.75, yTop, -1.75 - r, yTop);
-    
-    // Top of Left Wall
-    shape.lineTo(wStart + r, yTop);
-    shape.quadraticCurveTo(wStart, yTop, wStart, yTop - r);
-    
-    // Left outer edge
-    shape.lineTo(wStart, yBottom + r);
-    shape.quadraticCurveTo(wStart, yBottom, wStart + r, yBottom);
+    const boxTopY = box.position.y + boxThickness / 2;
+    const fillBottomY = boxTopY + EPS * 2;
+    const fillTopY = channelTopY;
+    const fillHeight = Math.max(0.05, fillTopY - fillBottomY);
 
-    const extrudeSettings = {
-        steps: 1,
-        depth: 3.0,
-        bevelEnabled: true,
-        bevelThickness: 0.02, // Smaller bevel for SOI
-        bevelSize: 0.02,
-        bevelSegments: 2
-    };
+    const fillMaterial = materials.silicon.clone();
+    fillMaterial.color = new THREE.Color(0x444466);
 
-    const bodyGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    bodyGeo.translate(0, 0, -1.5);
+    const fillGeo = new RoundedBoxGeometry(4.5, fillHeight, 3, 4, 0.08);
+    const fill = new THREE.Mesh(fillGeo, fillMaterial);
+    fill.position.y = fillBottomY + fillHeight / 2;
+    fill.receiveShadow = true;
+    group.add(fill);
 
-    const body = new THREE.Mesh(bodyGeo, materials.substrate); // Use substrate/body material
-    // BOX is at -0.5 center, height 0.5 -> top at -0.25
-    // So place Body at -0.25
-    body.position.y = -0.25 + EPS * 2;
-    body.receiveShadow = true;
-    group.add(body);
-
-    // Active Silicon (S/D) - Embedded
-    // Height: yWellBottom (0.05) to yTop (0.3) -> 0.25 height
-    // Position y relative to group: BOX top (-0.25) + yWellBottom (0.05) + HalfHeight (0.125) = -0.075
-    // Width: 1.25 (same as Planar wells)
-    
-    const sdHeight = 0.25;
-    const sdY = -0.25 + yWellBottom + sdHeight/2 + EPS * 3;
-
-    // Source (Left)
-    const sourceGeo = new RoundedBoxGeometry(1.20, sdHeight, 3.02, 4, 0.05);
+    // Source/Drain - Same as Planar
+    const sourceGeo = new RoundedBoxGeometry(1.20, 0.5, 3.02, 4, 0.05);
     const source = new THREE.Mesh(sourceGeo, materials.siliconActive);
-    source.position.set(-1.125, sdY, 0);
+    source.material = materials.siliconActive.clone();
+    source.material.transparent = true;
+    source.material.opacity = 0.7;
+    source.material.depthWrite = false;
+    source.name = 'source';
+    source.position.set(-1.125, -0.05 + EPS, 0);
     source.castShadow = true;
     group.add(source);
 
-    // Drain (Right)
-    const drainGeo = new RoundedBoxGeometry(1.20, sdHeight, 3.02, 4, 0.05);
+    const drainGeo = new RoundedBoxGeometry(1.20, 0.5, 3.02, 4, 0.05);
     const drain = new THREE.Mesh(drainGeo, materials.siliconActive);
-    drain.position.set(1.125, sdY, 0);
+    drain.material = materials.siliconActive.clone();
+    drain.material.transparent = true;
+    drain.material.opacity = 0.7;
+    drain.material.depthWrite = false;
+    drain.name = 'drain';
+    drain.position.set(1.125, -0.05 + EPS, 0);
     drain.castShadow = true;
     group.add(drain);
 
-    // Channel - Visual layer on top of body (Center Wall)
-    // Center wall top is at -0.25 + 0.3 = 0.05
-    const channelGeo = new RoundedBoxGeometry(1, 0.05, 3, 4, 0.02);
+    const channelGeo = new RoundedBoxGeometry(1, channelThickness, 3, 4, 0.02);
     const channel = new THREE.Mesh(channelGeo, materials.silicon);
-    channel.position.y = 0.05 + EPS * 4;
+    channel.material = materials.silicon.clone();
+    channel.material.transparent = true;
+    channel.material.opacity = 0.7;
+    channel.material.depthWrite = false;
+    channel.name = 'channel';
+    channel.position.y = channelTopY + channelThickness / 2 - EPS * 2;
     channel.scale.set(1.02, 1.0, 1.02);
     group.add(channel);
 
-    // Gate Oxide - On top of the channel
-    const oxideGeo = new RoundedBoxGeometry(1, 0.05, 3, 4, 0.01);
+    const oxideThickness = 0.05;
+    const oxideGeo = new RoundedBoxGeometry(1, oxideThickness, 3, 4, 0.01);
     const oxide = new THREE.Mesh(oxideGeo, materials.oxide);
-    oxide.position.y = 0.1 + EPS * 5;
+    oxide.position.y = channelTopY + channelThickness + oxideThickness / 2 + EPS * 3;
     group.add(oxide);
 
-    // Gate - Above the oxide
     const gateGeo = new RoundedBoxGeometry(1, 0.6, 3, 4, 0.05);
     const gate = new THREE.Mesh(gateGeo, materials.gateMetal);
-    gate.position.y = 0.425 + EPS * 6;
+    gate.position.y = channelTopY + channelThickness + oxideThickness + 0.6 / 2 + EPS * 4;
     gate.castShadow = true;
     group.add(gate);
 
@@ -343,11 +301,19 @@ export function createGAAFET(scene, particleSystem) {
     // Source and Drain Pillars
     const sdGeo = new RoundedBoxGeometry(0.6, 2, 3, 4, 0.05);
     const source = new THREE.Mesh(sdGeo, materials.siliconActive);
+    source.material = materials.siliconActive.clone();
+    source.material.transparent = true;
+    source.material.opacity = 0.7;
+    source.material.depthWrite = false;
     source.position.set(-1.8, -0.5 + EPS, 0);
     source.castShadow = true;
     group.add(source);
 
     const drain = new THREE.Mesh(sdGeo, materials.siliconActive);
+    drain.material = materials.siliconActive.clone();
+    drain.material.transparent = true;
+    drain.material.opacity = 0.7;
+    drain.material.depthWrite = false;
     drain.position.set(1.8, -0.5 + EPS, 0);
     drain.castShadow = true;
     group.add(drain);
