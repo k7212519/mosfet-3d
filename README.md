@@ -13,7 +13,6 @@
 │   ├── particles.js       # 粒子系统（电子流动演示）
 │   └── models.js          # 模型生成函数（4种晶体管结构）
 ├── assets/
-│   └── logo_cycore.png    # Logo图片
 └── README.md              # 项目说明
 ```
 
