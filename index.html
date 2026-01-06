@@ -73,7 +73,7 @@
             right: 30px;
             text-align: right;
             color: white;
-            max-width: 350px;
+            max-width: 450px;
             pointer-events: none;
             transition: all 0.3s ease;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
@@ -81,22 +81,24 @@
         h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
         p { font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8); margin: 0; }
         .highlight { color: #4db8ff; font-weight: bold; }
+        .model-subtitle { display: block; font-size: 16px; font-weight: 400; text-transform: none; letter-spacing: 0; }
 
         /* Mobile Optimization */
         @media (max-width: 768px) {
             #ui-container {
                 bottom: 20px;
-                padding: 8px 15px;
-                gap: 8px;
-                width: 90%;
+                padding: 6px 10px;
+                gap: 6px;
+                width: auto;
+                max-width: 98vw;
                 justify-content: center;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
             }
             .btn {
-                padding: 6px 12px;
-                font-size: 11px;
+                padding: 5px 8px;
+                font-size: 10px;
                 border-radius: 12px;
-                flex: 1 0 auto;
+                flex: 0 1 auto;
                 text-align: center;
             }
             #logo {
@@ -116,6 +118,9 @@
             p {
                 font-size: 11px;
                 line-height: 1.4;
+            }
+            .model-subtitle {
+                font-size: 12px;
             }
         }
     </style>

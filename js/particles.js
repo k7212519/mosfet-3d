@@ -4,7 +4,7 @@ import * as THREE from 'three';
 export class ParticleSystem {
     constructor() {
         this.mesh = null;
-        this.count = 200; // Reduced from 400
+        this.count = 100; // Default count
         this.dummy = new THREE.Object3D();
         this.data = []; // { velocity, boundary }
         this.anchors = {}; // { [type]: { start, end, channelBox } }
@@ -19,11 +19,15 @@ export class ParticleSystem {
             this.data = [];
         }
 
-        const geometry = new THREE.SphereGeometry(0.03, 8, 8);
+        // Adjust particle count based on complexity
+        // GAAFET has 9 channels, so it needs more particles, but 300 was too heavy.
+        this.count = (type === 'gaafet') ? 150 : 100;
+
+        const geometry = new THREE.SphereGeometry(0.025, 8, 8); // Increased size for visibility
         const material = new THREE.MeshBasicMaterial({ 
             color: 0x00ffff, 
             transparent: true, 
-            opacity: 0.8,
+            opacity: 0.9, // Higher opacity
             blending: THREE.AdditiveBlending
         });
         material.depthWrite = false;
@@ -119,8 +123,8 @@ export class ParticleSystem {
         } else if (type === 'finfet') {
             x = randomX ? (Math.random() * (xEnd - xStart) + xStart) : xStart;
             // FinFET: Flow on Top and Sides of Fins
-            // FinFET: Flow on Top and Sides of Fins
-            const finChoice = Math.random() > 0.5 ? 0.6 : -0.6; // Choose Fin 1 or 2
+            const fins = [-0.6, 0, 0.6];
+            const finChoice = fins[Math.floor(Math.random() * fins.length)]; // Choose Fin 1, 2, or 3
             const faceChoice = Math.random(); // Top or Sides?
             
             if (faceChoice > 0.6) { // Top (40% chance)
@@ -133,34 +137,25 @@ export class ParticleSystem {
             }
 
         } else if (type === 'gaafet') {
-            // GAAFET: Flow on SURFACE of the nanosheets for better visibility
-            const sheetIdx = Math.floor(Math.random() * 3);
-            const sheetY = -1.0 + (sheetIdx * 0.6) + 0.002;
+            // GAAFET: Flow through the 3x3 grid of nanosheets
+            const zList = [-0.6, 0, 0.6];
+            const yList = [0.3, 0.6, 0.9];
             
-            // Distribute on the outer skin of the nanosheet
-            const face = Math.random();
-            const hH = 0.075; // Half Height
-            const hW = 0.5;   // Half Width
-            const eps = 0.02; // Offset
+            const zCenter = zList[Math.floor(Math.random() * zList.length)];
+            const yCenter = yList[Math.floor(Math.random() * yList.length)];
             
-            if (face < 0.33) { // Top Surface
-                y = sheetY + hH + eps;
-                z = (Math.random() - 0.5) * (hW * 2);
-            } else if (face < 0.66) { // Bottom Surface
-                y = sheetY - hH - eps;
-                z = (Math.random() - 0.5) * (hW * 2);
-            } else if (face < 0.83) { // Front Side
-                y = sheetY + (Math.random() - 0.5) * (hH * 2);
-                z = hW + eps;
-            } else { // Back Side
-                y = sheetY + (Math.random() - 0.5) * (hH * 2);
-                z = -hW - eps;
+            // Strictly inside the nanosheets (Width 0.3, Height 0.14)
+            y = yCenter + (Math.random() - 0.5) * 0.1;  // Inside height
+            z = zCenter + (Math.random() - 0.5) * 0.25; // Inside width
+
+            // Constrain X for GAAFET
+            xStart = -2.3;
+            xEnd = 2.3;
+            if (!randomX) {
+                x = xStart;
+            } else {
+                x = Math.random() * (xEnd - xStart) + xStart;
             }
-            
-            // Constrain X for GAAFET (S/D are at +/- 1.8)
-            xStart = -2.2;
-            xEnd = 2.2;
-            if (!randomX) x = xStart;
         }
 
         dummy.position.set(x, y, z);

@@ -154,9 +154,9 @@ export function createSOICMOS(scene, particleSystem) {
     const group = new THREE.Group();
 
     // Substrate (Base)
-    const substrateGeo = new RoundedBoxGeometry(4.5, 1.2, 3, 4, 0.1);
+    const substrateGeo = new RoundedBoxGeometry(4.5, 0.6, 3, 4, 0.1);
     const substrate = new THREE.Mesh(substrateGeo, materials.substrate);
-    substrate.position.y = -1.5;
+    substrate.position.y = -1.0;
     substrate.receiveShadow = true;
     group.add(substrate);
 
@@ -172,7 +172,7 @@ export function createSOICMOS(scene, particleSystem) {
     const sdBottomY = sdCenterY - sdHeight / 2;
 
     // BOX is an opaque U-shape (single solid path)
-    const boxThickness = 0.6;
+    const boxThickness = 0.4;
     const boxTopY = sdBottomY; // This variable name is confusing, it's actually the "Shelf" top? 
                                // Wait, boxTopY in previous code was sdBottomY.
                                // But now BOX goes up to yTop.
@@ -344,15 +344,19 @@ export function createFinFET(scene, particleSystem) {
     // Fins (Multiple)
     const finGeo = new RoundedBoxGeometry(4.6, 0.8, 0.3, 4, 0.03);
     
-    const fin1 = new THREE.Mesh(finGeo, materials.siliconActive);
-    fin1.position.set(0, 0.15 + EPS, -0.6); 
-    fin1.castShadow = true;
-    group.add(fin1);
-
-    const fin2 = new THREE.Mesh(finGeo, materials.siliconActive);
-    fin2.position.set(0, 0.15 + EPS, 0.6);
-    fin2.castShadow = true;
-    group.add(fin2);
+    // 3 Fins with spacing
+    const positions = [-0.6, 0, 0.6];
+    
+    positions.forEach(z => {
+        const fin = new THREE.Mesh(finGeo, materials.siliconActive);
+        fin.material = materials.siliconActive.clone();
+        fin.material.transparent = true;
+        fin.material.opacity = 0.7;
+        fin.material.depthWrite = false;
+        fin.position.set(0, 0.15 + EPS, z);
+        fin.castShadow = true;
+        group.add(fin);
+    });
 
     // Oxide (Isolation between fins - STI)
     const stiGeo = new RoundedBoxGeometry(4.5, 0.4, 3.0, 4, 0.04);
@@ -366,12 +370,10 @@ export function createFinFET(scene, particleSystem) {
     group.add(sti);
 
     // Gate
-    const gateGeo = new RoundedBoxGeometry(1.25, 1.25, 3.2, 4, 0.05);
+    const gateGeo = new RoundedBoxGeometry(1.25, 1.0, 3.2, 4, 0.03);
     const gate = new THREE.Mesh(gateGeo, materials.gateMetal);
-    gate.position.set(0, 0.5, 0);
+    gate.position.set(0, 0.25, 0); 
     gate.material = materials.gateMetal.clone();
-    gate.material.transparent = true;
-    gate.material.opacity = 0.7;
     gate.castShadow = true;
     group.add(gate);
 
@@ -384,50 +386,49 @@ export function createFinFET(scene, particleSystem) {
 export function createGAAFET(scene, particleSystem) {
     const group = new THREE.Group();
 
-    // Substrate
-    const substrateGeo = new RoundedBoxGeometry(4.5, 0.5, 3, 4, 0.1);
+    // 1. Substrate (Same as FinFET)
+    const substrateGeo = new RoundedBoxGeometry(4.6, 0.5, 3.1, 4, 0.1);
     const substrate = new THREE.Mesh(substrateGeo, materials.substrate);
-    substrate.position.y = -1.5;
+    substrate.position.y = -0.5;
     substrate.receiveShadow = true;
     group.add(substrate);
 
-    // Source and Drain Pillars
-    const sdGeo = new RoundedBoxGeometry(0.6, 2, 3, 4, 0.05);
-    const source = new THREE.Mesh(sdGeo, materials.siliconActive);
-    source.material = materials.siliconActive.clone();
-    source.material.transparent = true;
-    source.material.opacity = 0.7;
-    source.material.depthWrite = false;
-    source.position.set(-1.8, -0.5 + EPS, 0);
-    source.castShadow = true;
-    group.add(source);
-
-    const drain = new THREE.Mesh(sdGeo, materials.siliconActive);
-    drain.material = materials.siliconActive.clone();
-    drain.material.transparent = true;
-    drain.material.opacity = 0.7;
-    drain.material.depthWrite = false;
-    drain.position.set(1.8, -0.5 + EPS, 0);
-    drain.castShadow = true;
-    group.add(drain);
-
-    // Nanosheets
-    const sheetGeo = new RoundedBoxGeometry(3.6, 0.15, 1, 4, 0.015);
+    // 2. Nanosheets (3x3 Grid)
+    // 3 horizontal stacks (Z) x 3 vertical stacks (Y)
+    const sheetGeo = new RoundedBoxGeometry(4.6, 0.14, 0.3, 4, 0.02);
     
-    for(let i = 0; i < 3; i++) {
-        const sheet = new THREE.Mesh(sheetGeo, materials.silicon);
-        sheet.position.set(0, -1.0 + (i * 0.6) + EPS, 0); 
-        sheet.castShadow = true;
-        group.add(sheet);
-    }
+    const zPositions = [-0.6, 0, 0.6];
+    const yPositions = [0.3, 0.6, 0.9]; // Increased spacing
 
-    // Gate
-    const gateGeo = new RoundedBoxGeometry(1.0, 2.25, 2.55, 4, 0.05); 
+    zPositions.forEach(z => {
+        yPositions.forEach(y => {
+            const sheet = new THREE.Mesh(sheetGeo, materials.siliconActive);
+            sheet.material = materials.siliconActive.clone();
+            sheet.material.transparent = true;
+            sheet.material.opacity = 0.7;
+            sheet.material.depthWrite = false;
+            sheet.position.set(0, y, z);
+            sheet.castShadow = true;
+            group.add(sheet);
+        });
+    });
+
+    // 3. Oxide (STI) - Isolation (Same as FinFET)
+    const stiGeo = new RoundedBoxGeometry(4.5, 0.4, 3.0, 4, 0.04);
+    const sti = new THREE.Mesh(stiGeo, new THREE.MeshPhysicalMaterial({
+        color: 0xcccccc,
+        roughness: 0.5,
+        metalness: 0.1
+    })); 
+    sti.position.y = -0.05 + EPS; 
+    sti.receiveShadow = true;
+    group.add(sti);
+
+    // 4. Gate (Same as FinFET)
+    const gateGeo = new RoundedBoxGeometry(1.25, 1.4, 3.2, 4, 0.03);
     const gate = new THREE.Mesh(gateGeo, materials.gateMetal);
-    gate.position.set(0, -0.4, 0);
+    gate.position.set(0, 0.45, 0); 
     gate.material = materials.gateMetal.clone();
-    gate.material.transparent = true;
-    gate.material.opacity = 0.7;
     gate.castShadow = true;
     group.add(gate);
 

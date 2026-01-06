@@ -58,10 +58,10 @@ function clearScene() {
 
 function updateUI(type) {
     const titleMap = {
-        'planar': 'Planar MOSFET (平面场效应晶体管)',
-        'soi': 'SOI MOSFET (绝缘体上硅场效应管)',
-        'finfet': 'FinFET (鳍式场效应晶体管)',
-        'gaafet': 'GAAFET (全环绕栅极场效应管)'
+        'planar': 'Planar MOSFET<br><span class="model-subtitle">(平面场效应晶体管)</span>',
+        'soi': 'SOI MOSFET<br><span class="model-subtitle">(绝缘体上硅场效应管)</span>',
+        'finfet': 'FinFET<br><span class="model-subtitle">(鳍式场效应晶体管)</span>',
+        'gaafet': 'GAAFET<br><span class="model-subtitle">(全环绕栅极场效应管)</span>'
     };
     const descMap = {
         'planar': '传统的平面结构，电流在硅片表面的二维平面中流动。随着尺寸缩小，漏电流难以控制。',
@@ -70,7 +70,7 @@ function updateUI(type) {
         'gaafet': '栅极四面完全包裹通道（通常为纳米线或纳米片），提供极致的电流控制能力，是3nm及以下节点的关键技术。'
     };
 
-    document.getElementById('model-title').innerText = titleMap[type];
+    document.getElementById('model-title').innerHTML = titleMap[type];
     document.getElementById('model-desc').innerText = descMap[type];
 
     document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
