@@ -7,6 +7,16 @@
     <style>
         body { margin: 0; overflow: hidden; background-color: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; }
+        #top-bar {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            right: 30px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            z-index: 110;
+        }
         #ui-container {
             position: absolute;
             bottom: 30px;
@@ -59,15 +69,83 @@
             font-weight: 600;
         }
         #info-panel {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            text-align: right;
+            text-align: left;
             color: white;
             max-width: 450px;
             pointer-events: none;
             transition: all 0.3s ease;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        #lang-switch {
+            display: flex;
+            gap: 8px;
+            height: 36px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0 10px;
+            border-radius: 16px;
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+        }
+        #top-actions {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        #github-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #github-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        #github-link svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 6px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .lang-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .lang-btn.active {
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
         }
         h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
         p { font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8); margin: 0; }
@@ -76,6 +154,11 @@
 
         /* Mobile Optimization */
         @media (max-width: 768px) {
+            #top-bar {
+                top: 20px;
+                left: 20px;
+                right: 20px;
+            }
             #ui-container {
                 bottom: 20px;
                 padding: 6px 10px;
@@ -93,8 +176,6 @@
                 text-align: center;
             }
             #info-panel {
-                top: 20px;
-                right: 20px;
                 max-width: 200px;
             }
             h1 {
@@ -121,18 +202,31 @@
 </head>
 <body>
 
-    <div id="info-panel">
-        <h1 id="model-title">MOSFET 展示</h1>
-        <p id="model-desc">选择下方按钮查看不同工艺节点下的晶体管结构。</p>
+    <div id="top-bar">
+        <div id="info-panel">
+            <h1 id="model-title">MOSFET 展示</h1>
+            <p id="model-desc">选择下方按钮查看不同工艺节点下的晶体管结构。</p>
+        </div>
+        <div id="top-actions">
+            <div id="lang-switch">
+                <button class="lang-btn" data-lang="zh" onclick="window.setLanguage('zh')">中文</button>
+                <button class="lang-btn" data-lang="en" onclick="window.setLanguage('en')">EN</button>
+            </div>
+            <a id="github-link" href="https://github.com/k7212519/mosfet-3d" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 .5C5.73.5.75 5.66.75 12.07c0 5.13 3.29 9.48 7.86 11.01.58.11.8-.26.8-.58 0-.29-.01-1.04-.02-2.04-3.2.71-3.87-1.58-3.87-1.58-.52-1.36-1.27-1.72-1.27-1.72-1.04-.73.08-.71.08-.71 1.15.08 1.76 1.23 1.76 1.23 1.02 1.78 2.68 1.27 3.33.97.1-.76.4-1.27.72-1.56-2.56-.3-5.25-1.31-5.25-5.84 0-1.29.44-2.35 1.16-3.18-.12-.3-.5-1.52.11-3.17 0 0 .95-.31 3.12 1.21.9-.26 1.87-.38 2.83-.39.96.01 1.93.13 2.83.39 2.17-1.52 3.12-1.21 3.12-1.21.61 1.65.23 2.87.11 3.17.72.83 1.16 1.89 1.16 3.18 0 4.54-2.69 5.54-5.26 5.83.41.36.77 1.09.77 2.2 0 1.59-.01 2.87-.01 3.26 0 .32.21.69.81.58 4.56-1.53 7.86-5.88 7.86-11.01C23.25 5.66 18.27.5 12 .5z" />
+                </svg>
+            </a>
+        </div>
     </div>
 
     <div id="canvas-container"></div>
 
     <div id="ui-container">
-        <button class="btn active" onclick="window.switchModel('planar')">Planar MOSFET</button>
-        <button class="btn" onclick="window.switchModel('soi')">SOI MOSFET</button>
-        <button class="btn" onclick="window.switchModel('finfet')">FinFET</button>
-        <button class="btn" onclick="window.switchModel('gaafet')">GAAFET</button>
+        <button class="btn active" data-model="planar" onclick="window.switchModel('planar')">Planar MOSFET</button>
+        <button class="btn" data-model="soi" onclick="window.switchModel('soi')">SOI MOSFET</button>
+        <button class="btn" data-model="finfet" onclick="window.switchModel('finfet')">FinFET</button>
+        <button class="btn" data-model="gaafet" onclick="window.switchModel('gaafet')">GAAFET</button>
     </div>
 
     <script type="module" src="js/main.js"></script>

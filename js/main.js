@@ -10,6 +10,94 @@ let currentModelGroup = null;
 let animationId;
 const particleSystem = new ParticleSystem();
 
+let currentModelType = 'planar';
+let currentLanguage = 'zh';
+
+const I18N = {
+    zh: {
+        models: {
+            planar: {
+                titleHtml: 'Planar MOSFET<br><span class="model-subtitle">(平面场效应晶体管)</span>',
+                desc: '传统的平面结构，电流在硅片表面的二维平面中流动。随着尺寸缩小，漏电流难以控制。'
+            },
+            soi: {
+                titleHtml: 'SOI MOSFET<br><span class="model-subtitle">(绝缘体上硅场效应管)</span>',
+                desc: '在硅衬底和活性层之间增加了一层氧化埋层(BOX)，减少寄生电容和漏电流，适合低功耗应用。'
+            },
+            finfet: {
+                titleHtml: 'FinFET<br><span class="model-subtitle">(鳍式场效应晶体管)</span>',
+                desc: '将通道竖立起来形成"鳍(Fin)"，栅极三面包裹通道，极大增强了对电流的控制能力，是22nm-5nm节点的主流技术。'
+            },
+            gaafet: {
+                titleHtml: 'GAAFET<br><span class="model-subtitle">(全环绕栅极场效应管)</span>',
+                desc: '栅极四面完全包裹通道（通常为纳米线或纳米片），提供极致的电流控制能力，是3nm及以下节点的关键技术。'
+            }
+        },
+        buttons: {
+            planar: '平面 MOSFET',
+            soi: 'SOI MOSFET',
+            finfet: 'FinFET',
+            gaafet: 'GAAFET'
+        }
+    },
+    en: {
+        models: {
+            planar: {
+                titleHtml: 'Planar MOSFET<br><span class="model-subtitle">(Planar MOSFET)</span>',
+                desc: 'A traditional planar structure where current flows along the silicon surface. As scaling continues, leakage becomes harder to control.'
+            },
+            soi: {
+                titleHtml: 'SOI MOSFET<br><span class="model-subtitle">(Silicon-on-Insulator MOSFET)</span>',
+                desc: 'Adds a buried oxide (BOX) layer between substrate and active silicon, reducing parasitics and leakage, suitable for low-power designs.'
+            },
+            finfet: {
+                titleHtml: 'FinFET<br><span class="model-subtitle">(Fin Field-Effect Transistor)</span>',
+                desc: 'Uses a vertical fin channel. The gate wraps around three sides of the fin, greatly improving electrostatic control. Mainstream from ~22nm to 5nm.'
+            },
+            gaafet: {
+                titleHtml: 'GAAFET<br><span class="model-subtitle">(Gate-All-Around FET)</span>',
+                desc: 'The gate fully surrounds the channel (nanowire/nanosheet), offering the best control and enabling sub-3nm technology nodes.'
+            }
+        },
+        buttons: {
+            planar: 'Planar MOSFET',
+            soi: 'SOI MOSFET',
+            finfet: 'FinFET',
+            gaafet: 'GAAFET'
+        }
+    }
+};
+
+function updateModelButtonsActive(type) {
+    document.querySelectorAll('.btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.model === type);
+    });
+}
+
+function updateModelButtonsText(lang) {
+    document.querySelectorAll('.btn').forEach(btn => {
+        const model = btn.dataset.model;
+        const text = I18N?.[lang]?.buttons?.[model];
+        if (text) btn.innerText = text;
+    });
+}
+
+function updateLanguageButtons(lang) {
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+}
+
+function applyLanguage(lang, { persist } = { persist: true }) {
+    if (!I18N[lang]) return;
+    currentLanguage = lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    if (persist) localStorage.setItem('lang', lang);
+    updateLanguageButtons(lang);
+    updateModelButtonsText(lang);
+    updateUI(currentModelType);
+}
+
 function setupLights() {
     RectAreaLightUniformsLib.init();
 
@@ -57,36 +145,21 @@ function clearScene() {
 }
 
 function updateUI(type) {
-    const titleMap = {
-        'planar': 'Planar MOSFET<br><span class="model-subtitle">(平面场效应晶体管)</span>',
-        'soi': 'SOI MOSFET<br><span class="model-subtitle">(绝缘体上硅场效应管)</span>',
-        'finfet': 'FinFET<br><span class="model-subtitle">(鳍式场效应晶体管)</span>',
-        'gaafet': 'GAAFET<br><span class="model-subtitle">(全环绕栅极场效应管)</span>'
-    };
-    const descMap = {
-        'planar': '传统的平面结构，电流在硅片表面的二维平面中流动。随着尺寸缩小，漏电流难以控制。',
-        'soi': '在硅衬底和活性层之间增加了一层氧化埋层(BOX)，减少寄生电容和漏电流，适合低功耗应用。',
-        'finfet': '将通道竖立起来形成"鳍(Fin)"，栅极三面包裹通道，极大增强了对电流的控制能力，是22nm-5nm节点的主流技术。',
-        'gaafet': '栅极四面完全包裹通道（通常为纳米线或纳米片），提供极致的电流控制能力，是3nm及以下节点的关键技术。'
-    };
+    const titleHtml = I18N?.[currentLanguage]?.models?.[type]?.titleHtml;
+    const desc = I18N?.[currentLanguage]?.models?.[type]?.desc;
+    if (titleHtml) document.getElementById('model-title').innerHTML = titleHtml;
+    if (desc) document.getElementById('model-desc').innerText = desc;
+}
 
-    document.getElementById('model-title').innerHTML = titleMap[type];
-    document.getElementById('model-desc').innerText = descMap[type];
-
-    document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+window.setLanguage = function(lang) {
+    applyLanguage(lang, { persist: true });
 }
 
 window.switchModel = function(type) {
-    const buttons = document.querySelectorAll('.btn');
-    buttons.forEach(b => {
-        if(b.getAttribute('onclick').includes(type)) {
-            b.classList.add('active');
-        } else {
-            b.classList.remove('active');
-        }
-    });
-
+    currentModelType = type;
     clearScene();
+
+    updateModelButtonsActive(type);
     updateUI(type);
 
     if(type === 'planar') currentModelGroup = createPlanarCMOS(scene, particleSystem);
@@ -123,7 +196,7 @@ function init() {
 
     // Camera
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(5, 4, 8);
+    camera.position.set(7, 6, 12);
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
@@ -149,30 +222,31 @@ function init() {
     // Initial Model based on URL param
     const urlParams = new URLSearchParams(window.location.search);
     const modelIndex = urlParams.get('type');
-    
+    const langParam = urlParams.get('lang');
+    const storedLang = localStorage.getItem('lang');
+    const browserLang = (navigator.language || '').toLowerCase();
+    const initialLang = (langParam === 'zh' || langParam === 'en')
+        ? langParam
+        : (storedLang === 'zh' || storedLang === 'en')
+            ? storedLang
+            : (browserLang.startsWith('zh') ? 'zh' : 'en');
+
     if (modelIndex === '2') {
+        currentModelType = 'soi';
         currentModelGroup = createSOICMOS(scene, particleSystem);
-        updateUI('soi');
-        // Update button state
-        document.querySelectorAll('.btn').forEach((b, i) => {
-            b.classList.toggle('active', i === 1);
-        });
     } else if (modelIndex === '3') {
+        currentModelType = 'finfet';
         currentModelGroup = createFinFET(scene, particleSystem);
-        updateUI('finfet');
-        document.querySelectorAll('.btn').forEach((b, i) => {
-            b.classList.toggle('active', i === 2);
-        });
     } else if (modelIndex === '4') {
+        currentModelType = 'gaafet';
         currentModelGroup = createGAAFET(scene, particleSystem);
-        updateUI('gaafet');
-        document.querySelectorAll('.btn').forEach((b, i) => {
-            b.classList.toggle('active', i === 3);
-        });
     } else {
+        currentModelType = 'planar';
         currentModelGroup = createPlanarCMOS(scene, particleSystem);
-        updateUI('planar');
     }
+
+    updateModelButtonsActive(currentModelType);
+    applyLanguage(initialLang, { persist: langParam === 'zh' || langParam === 'en' });
 
     // Resize listener
     window.addEventListener('resize', onWindowResize);
