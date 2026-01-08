@@ -63,15 +63,6 @@ An interactive 3D transistor structure visualizer built with Three.js. It suppor
 
 使用 Three.js 开发的交互式 3D 晶体管结构可视化工具，支持 Planar MOSFET、SOI MOSFET、FinFET 和 GAAFET 四种结构。
 
-### 截图展示
-
-#### FinFET 3D 结构
-![FinFET](screenshots/finfet.png)
-
-#### 其他晶体管结构
-![Planar MOSFET](screenshots/mosfet.png)
-![GAAFET](screenshots/gaafet.png)
-
 ### 项目结构
 
 ```
