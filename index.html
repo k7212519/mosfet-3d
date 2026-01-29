@@ -1,129 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOSFET/FinFET/GAAFET 3D 结构展示</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #canvas-container { width: 100vw; height: 100vh; }
-        #ui-container {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 10px 20px;
-            border-radius: 20px;
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            z-index: 100;
-            width: auto;
-            max-width: 90vw;
-            box-sizing: border-box;
-            overflow-x: auto;
-            flex-wrap: nowrap;
-            scrollbar-width: none;
-        }
-        #ui-container::-webkit-scrollbar { 
-            display: none;
-        }
-        .btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: rgba(255, 255, 255, 0.9);
-            padding: 8px 16px;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-size: 13px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-        }
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.6);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        .btn.active {
-            background: rgba(255, 255, 255, 0.95);
-            color: #000;
-            border-color: #fff;
-            box-shadow: 0 0 15px rgba(255,255,255,0.3);
-            font-weight: 600;
-        }
-        #logo {
-            position: absolute;
-            top: 30px;
-            left: 30px;
-            width: 100px;
-            height: auto;
-            z-index: 10;
-            transition: width 0.3s ease;
-        }
-        #info-panel {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            text-align: right;
-            color: white;
-            max-width: 450px;
-            pointer-events: none;
-            transition: all 0.3s ease;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
-        p { font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8); margin: 0; }
-        .highlight { color: #4db8ff; font-weight: bold; }
-        .model-subtitle { display: block; font-size: 16px; font-weight: 400; text-transform: none; letter-spacing: 0; }
-
-        /* Mobile Optimization */
-        @media (max-width: 768px) {
-            #ui-container {
-                bottom: 20px;
-                padding: 6px 10px;
-                gap: 6px;
-                width: auto;
-                max-width: 98vw;
-                justify-content: center;
-                flex-wrap: nowrap;
-            }
-            .btn {
-                padding: 5px 8px;
-                font-size: 10px;
-                border-radius: 12px;
-                flex: 0 1 auto;
-                text-align: center;
-            }
-            #logo {
-                top: 20px;
-                left: 20px;
-                width: 70px;
-            }
-            #info-panel {
-                top: 20px;
-                right: 20px;
-                max-width: 200px;
-            }
-            h1 {
-                font-size: 16px;
-                margin-bottom: 5px;
-            }
-            p {
-                font-size: 11px;
-                line-height: 1.4;
-            }
-            .model-subtitle {
-                font-size: 12px;
-            }
-        }
-    </style>
+    <meta name="description" content="探索MOSFET晶体管技术的发展历程：从1960年的Planar MOSFET到现代GAAFET，了解半导体技术的革命性进步。">
+    <link rel="stylesheet" href="styles.css">
     <script type="importmap">
         {
             "imports": {
@@ -133,24 +16,313 @@
         }
     </script>
 </head>
+
 <body>
-    <img id="logo" src="assets/logo_cycore.png" alt="Logo">
+    <!-- Hero Section: 3D MOSFET Viewer -->
+    <section class="hero-section">
+        <img id="logo" src="assets/logo_cycore.png" alt="Logo">
 
-    <div id="info-panel">
-        <h1 id="model-title">MOSFET 展示</h1>
-        <p id="model-desc">选择下方按钮查看不同工艺节点下的晶体管结构。</p>
-    </div>
+        <div id="info-panel">
+            <h1 id="model-title">MOSFET 展示</h1>
+            <p id="model-desc">选择下方按钮查看不同工艺节点下的晶体管结构。</p>
+        </div>
 
-    <div id="canvas-container"></div>
+        <div id="canvas-container"></div>
 
-    <div id="ui-container">
-        <button class="btn active" onclick="window.switchModel('planar')">Planar MOSFET</button>
-        <button class="btn" onclick="window.switchModel('soi')">SOI MOSFET</button>
-        <button class="btn" onclick="window.switchModel('finfet')">FinFET</button>
-        <button class="btn" onclick="window.switchModel('gaafet')">GAAFET</button>
-    </div>
+        <div id="ui-container">
+            <button class="btn active" onclick="window.switchModel('planar')">Planar MOSFET</button>
+            <button class="btn" onclick="window.switchModel('soi')">SOI MOSFET</button>
+            <button class="btn" onclick="window.switchModel('finfet')">FinFET</button>
+            <button class="btn" onclick="window.switchModel('gaafet')">GAAFET</button>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="scroll-indicator"
+            onclick="document.getElementById('education').scrollIntoView({behavior: 'smooth'})">
+            <span>向下探索</span>
+            <div class="scroll-arrow"></div>
+        </div>
+    </section>
+
+    <!-- Education Section: MOSFET History Timeline -->
+    <section id="education" class="education-section">
+        <div class="section-header">
+            <h2>晶体管发展史</h2>
+            <p>从1960年贝尔实验室的突破性发明，到如今3纳米工艺的量产，探索MOSFET技术如何一步步改变世界</p>
+        </div>
+
+        <div class="timeline">
+            <!-- 1960: Planar MOSFET -->
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                    <span class="timeline-year">1960</span>
+                    <h3>Planar MOSFET 诞生</h3>
+                    <p class="card-subtitle">金属-氧化物-半导体场效应晶体管</p>
+
+                    <div class="timeline-image">
+                        <img src="assets/history/planar_mosfet.png" alt="Planar MOSFET 结构示意图">
+                    </div>
+
+                    <div class="inventor-section">
+                        <h4>🧑‍🔬 发明人物</h4>
+                        <div class="inventor-cards">
+                            <div class="inventor-card">
+                                <div class="inventor-name">Mohamed M. Atalla</div>
+                                <div class="inventor-info">
+                                    <span class="inventor-life">1924 - 2009</span>
+                                    <span class="inventor-origin">🇪🇬 埃及裔美国人</span>
+                                </div>
+                                <p class="inventor-bio">
+                                    开罗大学学士，普渡大学机械工程博士。1949年加入贝尔实验室，开创性地解决了硅表面钝化问题。后创立 Atalla Corporation，发明了保护全球 ATM
+                                    交易的硬件安全模块，被誉为"PIN 码之父"。2009年入选美国发明家名人堂。
+                                </p>
+                            </div>
+                            <div class="inventor-card">
+                                <div class="inventor-name">Dawon Kahng (姜大元)</div>
+                                <div class="inventor-info">
+                                    <span class="inventor-life">1931 - 1992</span>
+                                    <span class="inventor-origin">🇰🇷 韩裔美国人</span>
+                                </div>
+                                <p class="inventor-bio">
+                                    首尔大学物理学学士，俄亥俄州立大学电子工程博士。1959年加入贝尔实验室，工作29年至退休。1967年与施敏共同发明浮栅 MOSFET，奠定了 EPROM、EEPROM
+                                    和闪存的基础。后任 NEC 研究院创始院长。2009年入选美国发明家名人堂。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="story-section">
+                        <h4>📖 发明故事</h4>
+                        <p class="story">
+                            1955年，贝尔实验室的 Carl Frosch 和 Lincoln Derick
+                            在一次实验事故中，意外地在硅片表面生长出一层二氧化硅，发现这层薄膜具有优异的表面钝化效果。Atalla 敏锐地意识到这一发现的价值，花费数年时间深入研究热氧化工艺。
+                        </p>
+                        <p class="story">
+                            1959年11月，Atalla 和 Kahng 将这一技术与场效应原理相结合，成功演示了世界上第一个实用的 MOS
+                            晶体管。他们在1960年初将其命名为"硅-二氧化硅场感应表面器件"。然而，贝尔实验室当时对集成电路缺乏兴趣，这项发明最初被忽视。但 Fairchild 和 RCA
+                            的研究人员很快意识到其巨大潜力。
+                        </p>
+                        <p class="story highlight-text">
+                            如今，MOSFET 已成为<strong>人类历史上制造数量最多的器件</strong>，是现代电子学的基石，支撑着从智能手机到超级计算机的一切设备。
+                        </p>
+                    </div>
+
+                    <div class="features">
+                        <span class="feature-tag">✦ 平面二维沟道</span>
+                        <span class="feature-tag">✦ 低功耗设计</span>
+                        <span class="feature-tag">✦ 可大规模集成</span>
+                        <span class="feature-tag">✦ CMOS 技术基础</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1990s: SOI MOSFET -->
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                    <span class="timeline-year">1990s</span>
+                    <h3>SOI MOSFET 崛起</h3>
+                    <p class="card-subtitle">绝缘体上硅场效应晶体管</p>
+
+                    <div class="timeline-image">
+                        <img src="assets/history/soi_mosfet.png" alt="SOI MOSFET 结构示意图">
+                    </div>
+
+                    <div class="inventor-section">
+                        <h4>🏢 主导机构</h4>
+                        <div class="inventor-cards">
+                            <div class="inventor-card">
+                                <div class="inventor-name">IBM 研究院</div>
+                                <div class="inventor-info">
+                                    <span class="inventor-origin">🇺🇸 美国纽约</span>
+                                </div>
+                                <p class="inventor-bio">
+                                    IBM 是 SOI 技术商业化的先驱。1998年，IBM 首次在其 PowerPC 处理器中采用 SOI 技术，用于高端服务器和游戏主机（如 PlayStation
+                                    3、Xbox 360）。IBM 的研究证明 SOI 可带来高达 25-35% 的性能提升或 3 倍的功耗降低。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="story-section">
+                        <h4>📖 发展历程</h4>
+                        <p class="story">
+                            随着晶体管尺寸进入亚微米时代，<strong>短沟道效应</strong>和<strong>漏电流</strong>问题日益严峻。传统的体硅（Bulk
+                            Silicon）工艺已难以满足高性能、低功耗的双重需求。
+                        </p>
+                        <p class="story">
+                            SOI 技术的核心创新是在硅衬底与有源器件层之间插入一层薄薄的<strong>埋入氧化层（Buried Oxide, BOX）</strong>，通常由
+                            SIMOX（氧注入隔离）或晶圆键合技术制备。这层绝缘层有效地将晶体管与衬底隔离。
+                        </p>
+                        <p class="story">
+                            SOI 技术分为<strong>全耗尽型（FD-SOI）</strong>和<strong>部分耗尽型（PD-SOI）</strong>两种。FD-SOI
+                            因其更简单的制造工艺和更优异的低功耗特性，成为物联网、可穿戴设备和汽车电子的首选技术。法国 Soitec 公司是全球领先的 SOI 晶圆供应商。
+                        </p>
+                    </div>
+
+                    <div class="features">
+                        <span class="feature-tag">✦ 埋入氧化层隔离</span>
+                        <span class="feature-tag">✦ 降低寄生电容 ~25%</span>
+                        <span class="feature-tag">✦ 消除闩锁效应</span>
+                        <span class="feature-tag">✦ 抗辐射能力强</span>
+                        <span class="feature-tag">✦ 适合低功耗应用</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1999-2011: FinFET -->
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                    <span class="timeline-year">1999 → 2011</span>
+                    <h3>FinFET 革命</h3>
+                    <p class="card-subtitle">鳍式场效应晶体管 / 三栅极晶体管</p>
+
+                    <div class="timeline-image">
+                        <img src="assets/history/finfet.png" alt="FinFET 结构示意图">
+                    </div>
+
+                    <div class="inventor-section">
+                        <h4>🧑‍🔬 发明人物</h4>
+                        <div class="inventor-cards">
+                            <div class="inventor-card">
+                                <div class="inventor-name">胡正明 (Chenming Hu)</div>
+                                <div class="inventor-info">
+                                    <span class="inventor-life">1947 - 至今</span>
+                                    <span class="inventor-origin">🇹🇼 台湾裔美国人</span>
+                                </div>
+                                <p class="inventor-bio">
+                                    国立台湾大学电机学士，加州大学伯克利分校博士。1976年起任教于伯克利，2001-2004年任台积电首任首席技术官。著有5本专著、发表1000余篇论文、拥有100余项美国专利。2016年荣获美国国家技术与创新奖章，2020年获
+                                    IEEE 最高荣誉奖——IEEE 荣誉勋章，被誉为"微电子学远见者"。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="story-section">
+                        <h4>📖 发明故事</h4>
+                        <p class="story">
+                            1990年代末，摩尔定律遭遇危机。当晶体管尺寸缩小到 25nm
+                            以下时，传统平面结构的<strong>栅极</strong>已无法有效控制沟道电流，漏电流急剧增加，芯片过热问题日益严重。
+                        </p>
+                        <p class="story">
+                            1997年，在美国国防高级研究计划局（DARPA）的资助下，胡正明教授带领他在伯克利的团队开始探索一种全新的晶体管架构。1999年，他们提出了革命性的<strong>FinFET</strong>设计：将传统的平面沟道"竖立"起来，形成一个类似鱼鳍的垂直结构，栅极从三个方向包裹沟道。
+                        </p>
+                        <p class="story">
+                            2000年12月，他们在论文中正式命名这一结构为"FinFET"。然而，从实验室到商业量产花费了十多年时间。2011年，<strong>Intel</strong> 宣布在其 22nm
+                            工艺中首次商用 FinFET（Intel 称之为 3D Tri-Gate），实现了同功耗下 18% 的性能提升。Intel 评价这是"50年来半导体技术最激进的变革"。
+                        </p>
+                        <p class="story highlight-text">
+                            FinFET 技术此后被所有主要芯片制造商采用，成为 22nm 至 5nm 工艺节点的<strong>主流技术</strong>，为智能手机、AI
+                            芯片和云计算的爆发式增长提供了关键支撑。
+                        </p>
+                    </div>
+
+                    <div class="features">
+                        <span class="feature-tag">✦ 鳍式三维结构</span>
+                        <span class="feature-tag">✦ 栅极三面包围</span>
+                        <span class="feature-tag">✦ 短沟道效应抑制</span>
+                        <span class="feature-tag">✦ 性能提升 37%</span>
+                        <span class="feature-tag">✦ 功耗降低 50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2022: GAAFET -->
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                    <span class="timeline-year">2022</span>
+                    <h3>GAAFET 时代开启</h3>
+                    <p class="card-subtitle">全环绕栅极场效应晶体管 / 纳米片晶体管</p>
+
+                    <div class="timeline-image">
+                        <img src="assets/history/gaafet.png" alt="GAAFET 结构示意图">
+                    </div>
+
+                    <div class="inventor-section">
+                        <h4>🏢 主导机构</h4>
+                        <div class="inventor-cards">
+                            <div class="inventor-card">
+                                <div class="inventor-name">Samsung 三星电子</div>
+                                <div class="inventor-info">
+                                    <span class="inventor-origin">🇰🇷 韩国</span>
+                                </div>
+                                <p class="inventor-bio">
+                                    2000年代初开始研究 GAA 结构，2017年启动 3nm 工艺开发。2022年6月率先量产 3nm GAAFET
+                                    芯片，采用专有的<strong>多桥沟道（MBCFET）</strong>架构。相比 5nm 工艺，功耗降低 45%、性能提升 23%、面积缩小 16%。
+                                </p>
+                            </div>
+                            <div class="inventor-card">
+                                <div class="inventor-name">IBM 研究院</div>
+                                <div class="inventor-info">
+                                    <span class="inventor-origin">🇺🇸 美国</span>
+                                </div>
+                                <p class="inventor-bio">
+                                    2021年5月宣布全球首个 2nm 芯片技术突破，采用第二代纳米片架构。单芯片可容纳<strong>500亿个晶体管</strong>，栅极长度仅 12nm。相比
+                                    7nm 工艺，性能提升 40% 或功耗降低 75%。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="story-section">
+                        <h4>📖 技术演进</h4>
+                        <p class="story">
+                            GAA 晶体管的概念最早可追溯到 1988 年东芝研究团队的论文。2006年，韩国先进科技院（KAIST）展示了首个 3nm 级别的 GAA
+                            原型器件。然而，将这一概念转化为可量产的技术花费了十余年时间。
+                        </p>
+                        <p class="story">
+                            GAAFET 的核心创新是将 FinFET
+                            的垂直"鳍"替换为<strong>水平堆叠的纳米片（Nanosheet）</strong>或<strong>纳米线（Nanowire）</strong>，栅极从四个方向完全包裹每一层沟道。这种"全环绕"结构提供了最极致的静电控制能力，是克服
+                            FinFET 在 3nm 以下节点限制的关键。
+                        </p>
+                        <p class="story">
+                            纳米片的宽度可以灵活调整：增加宽度可提升驱动电流（性能优先），减小宽度则降低功耗（效率优先）。这种设计灵活性是 GAAFET 的独特优势。
+                        </p>
+                        <p class="story highlight-text">
+                            随着三星和 Intel 竞相推进 3nm/2nm 工艺，GAAFET 已成为后摩尔时代继续延续半导体微缩路线图的<strong>关键技术</strong>。台积电也计划在其
+                            2nm（N2）节点采用纳米片架构。
+                        </p>
+                    </div>
+
+                    <div class="features">
+                        <span class="feature-tag">✦ 栅极四面环绕</span>
+                        <span class="feature-tag">✦ 纳米片/纳米线</span>
+                        <span class="feature-tag">✦ 极致静电控制</span>
+                        <span class="feature-tag">✦ 可调沟道宽度</span>
+                        <span class="feature-tag">✦ 500亿+晶体管</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <script type="module" src="js/main.js"></script>
-</body>
-</html>
+    <script>
+        // Timeline animation with Intersection Observer
+        document.addEventListener('DOMContentLoaded', function () {
+            const timelineItems = document.querySelectorAll('.timeline-item');
 
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -30px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+
+            timelineItems.forEach(item => {
+                observer.observe(item);
+            });
+        });
+    </script>
+</body>
+
+</html>
